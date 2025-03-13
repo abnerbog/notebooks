@@ -1,5 +1,5 @@
 jupyter
-hsclient==1.1.2
+hsclient==1.1.6
 pandas==2.2.3
 earthaccess
 xarray
