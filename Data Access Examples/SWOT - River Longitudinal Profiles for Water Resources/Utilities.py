@@ -12,7 +12,7 @@ def PullReachTimeseries(reachid):
     baseurl= 'https://soto.podaac.earthdatacloud.nasa.gov/hydrocron/v1/timeseries?'
     time='&start_time=2022-12-01T00:00:00Z&end_time='+tend.strftime('%Y-%m-%dT%H:%M:%SZ')+'&'
     dataformat='csv'
-    fieldstrs='time_str,wse,reach_q'
+    fieldstrs='time_str,wse,reach_q,p_lon,p_lat'
     url=baseurl + 'feature=Reach&feature_id=' +  reachid + time + 'output=' + dataformat + '&fields=' + fieldstrs
 
     # pull data from HydroChron into res variable
