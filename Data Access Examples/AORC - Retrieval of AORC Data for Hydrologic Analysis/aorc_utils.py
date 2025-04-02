@@ -9,19 +9,6 @@ import geopandas as gpd
 from matplotlib.animation import FuncAnimation
 from IPython.display import HTML
 
-def get_conus_bucket_url(variable_code):
-    """
-    This function returns the S3 bucket url path for the CONSUS forcing data (in zarr format) for a given variable code.
-    
-    Parameters:
-    variable_code (str): The code of the variable.
-
-    Returns:
-    str: S3 bucket url path for forcing data.
-    """
-    conus_bucket_url = f's3://noaa-nwm-retrospective-3-0-pds/CONUS/zarr/forcing/{variable_code}.zarr'
-    return conus_bucket_url
-
 def load_dataset(conus_bucket_url):
     """
     This function loads the dataset from the given S3 bucket url path.
@@ -81,54 +68,6 @@ def get_aggregation_code(aggr_name):
     
     return agg_options[aggr_name]
 
-def get_variable_code(variable_name):
-    """
-    Gets a code for a given variable name for which data can be retrieved
-
-    Parameters:
-    variable_name (str): Name of the variable
-
-    Returns:
-    str: A variable code
-    """
-    variables = {
-        'Total Precipitation':'precip', 
-        'Air Temperature':'t2d', 
-        'Specific Humidity':'q2d', 
-        'Downward Long-Wave Radiation Flux':'lwdown',
-        'Downward Short-Wave Radiation Flux':'swdown',
-        'Pressure':'psfc',
-        'U-Component of Wind':'u2d',
-        'V-Component of Wind':'v2d'
-    }
-
-    if variable_name not in variables:
-        raise Exception(f"{variable_name} is not a valid variable name")
-    
-    return variables[variable_name]
-
-def get_time_code(interval_name):
-    """
-    Gets a time code for a given time interval name
-
-    Parameters:
-    interval_name (str): Name of the interval
-
-    Returns:
-    str: A time code
-    
-    """    
-    time_attrs = {
-        'hour':'h',
-        'day':'d',
-        'month':'M',
-        'year':'Y'
-    }
-    if interval_name not in time_attrs:
-        raise Exception(f"{interval_name} is not a valid interval name")
-    
-    return time_attrs[interval_name]
-
 def display_shapefile_map(gdf, basin_name):
     """
     Plots a shapefile with a topographic basemap.
@@ -157,7 +96,7 @@ def display_shapefile_map(gdf, basin_name):
     # Show the plot
     plt.show()
 
-def da_animate(da, gdf, variable_name, unit, agg_interval):
+def da_animate(da, gdf, variable_name, units, agg_interval):
     """ 
     Vidualize the data as an animated plot
     
@@ -176,12 +115,19 @@ def da_animate(da, gdf, variable_name, unit, agg_interval):
 
     # Initial plot setup
     initial_data = da.isel(time=0)
-    mesh = ax.pcolormesh(da['x'], da['y'], initial_data, shading='auto', cmap='viridis')
-    cbar = fig.colorbar(mesh, ax=ax, label=f"{variable_name} ({unit})")
+    x_coord = 'x' if 'x' in da.coords else 'longitude'
+    y_coord = 'y' if 'y' in da.coords else 'latitude'
+    mesh = ax.pcolormesh(da[x_coord], da[y_coord], initial_data, shading='auto', cmap='viridis')
+    cbar = fig.colorbar(mesh, ax=ax, label=f"{variable_name} ({units})")
 
     # Format time labels
     time_coords = pd.to_datetime(da['time'].values)
-    formatted_dates = time_coords.strftime('%Y-%m-%d' if agg_interval == 'day' else '%Y-%m' if agg_interval == 'month' else '%Y')
+    formatted_dates = time_coords.strftime(
+        '%Y-%m-%d %H:%M:%S' if agg_interval == 'hour' else 
+        '%Y-%m-%d' if agg_interval == 'day' else 
+        '%Y-%m' if agg_interval == 'month' else 
+        '%Y'
+    )
 
     # Update function
     def update(frame):
@@ -196,6 +142,6 @@ def da_animate(da, gdf, variable_name, unit, agg_interval):
     # Create animation
     anim = FuncAnimation(fig, update, frames=len(da.time), interval=1000, blit=True)
     plt.close(fig)
-    anim.save(f"{variable_name}_over_area.mp4", fps=1, writer="ffmpeg")
+    anim.save(f"AORC_ZoneRetrieval_{variable_name}.mp4", fps=1, writer="ffmpeg")
     return HTML(anim.to_jshtml()) 
 
