@@ -2,8 +2,10 @@
 
 This resource includes the following files:
 
-- **AORC_Point_Data_Retrieval.ipynb**: Retrieves and aggregates AORC data for a specific point specified by latitude and longitude or known geographic coordinates.
-- **AORC_Zone_Data_Retrieval.ipynb**: Retrieves and aggregates AORC data for a spatial domain defined by a shapefile.
+- **AORC_LL_PointRetrieval.ipynb**: Retrieves and aggregates data from the AORC latitude-longitude gridded dataset for a specific point specified using geographic coordinates.
+- **AORC_LL_ZoneRetrieval.ipynb**: Retrieves and aggregates data from the AORC latitude-longitude gridded dataset for an area defined by a polygon shapefile.
+- **AORC_NWMProj_PointRetrieval.ipynb**: Retrieves and aggregates data from the NWM projected dataset for a specific point specified using geographic coordinates.
+- **AORC_NWMProj_ZoneRetrieval.ipynb**: Retrieves and aggregates data from the NWM projected dataset for an area defined by a polygon shapefile.
 - **aorc_utils.py**: A Python script containing functions used by the notebooks.
 - **requirements.txt**: Lists the specific python library dependency versions required to run the notebooks.
 - **GSLSubbasins**: A shapefile of the Great Salt Lake Basin used as an example. 
