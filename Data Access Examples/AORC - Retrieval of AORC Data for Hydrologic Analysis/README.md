@@ -9,6 +9,7 @@ This resource includes the following files:
 - **aorc_utils.py**: A Python script containing functions used by the notebooks.
 - **requirements.txt**: Lists the specific python library dependency versions required to run the notebooks.
 - **GSLSubbasins**: A shapefile of the Great Salt Lake Basin used as an example. 
+- **AORC_DataRetrieval.pdf**: Notes on the coordinate systems and some of the differences between the datasets.
 - **README.md**: Explains the content of this resource.
 
 To use this resource in HydroShare, select ***Open With*** on one of the available application servers to launch the corresponding JupyterHub environment. Then, open the Jupyter Notebook for the format of the data you wish to retrieve and follow the instructions.
@@ -22,4 +23,5 @@ You may access this resource in HydroShare at:
 <http://www.hydroshare.org/resource/72ea9726187e43d7b50a624f2acf591f>
 
 Cite this resource as:
-Nassar, A., D. Tarboton, H. Salehabadi, A. M. Castronova, P. Dash (2025). Jupyter Notebooks for the Retrieval of AORC Data for Hydrologic Analysis, HydroShare, <http://www.hydroshare.org/resource/72ea9726187e43d7b50a624f2acf591f>
+Salehabadi, H., D. Tarboton, A. Nassar, A. M. Castronova, P. Dash (2025). Jupyter Notebooks for the Retrieval of AORC Data for Hydrologic Analysis, HydroShare, http://www.hydroshare.org/resource/72ea9726187e43d7b50a624f2acf591f
+
