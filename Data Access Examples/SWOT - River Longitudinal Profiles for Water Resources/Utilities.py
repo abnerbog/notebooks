@@ -101,3 +101,37 @@ def getdf(data,fields):
         df.loc[len(df.index)]=rowdata
 
     return df
+
+def ChangeDatum(x,y,zin):
+    '''
+        this function changes datum using the vdatum api.
+        
+        this function is currently limited in functionality to go from 
+        SWOT in EGM08 to NAVD88. Future versions can accommodate a wider degree of 
+        flexibility.
+        
+        x ~ approximate longitude of location to compute adjusted vertical data
+        y ~ approximate latitude of location to compute adjusted vertical data
+        
+        zin ~ swot elevation measurement in EGM08 [meters]
+        
+        returns a vertical offset [meters] (swot_offset), and a revised elevation [meters] (zout)
+        
+        the offset is defined:
+            zout = zin + swot_offset
+            
+        to use the offset, add it to the input elevation in EGM08. this operation returns elevation 
+        in NAVD88
+                
+    '''
+    
+    vdatum_url = f"https://vdatum.noaa.gov/vdatumweb/api/convert?region=ak&s_x={x}&s_y={y}&s_z={zin}&s_v_unit=m&s_h_frame=WGS84_G1674&s_v_frame=EGM2008&s_v_geoid=egm2008&t_v_frame=NAVD88&t_v_geoid=geoid12b"
+    
+    res = requests.get(vdatum_url)
+    data=json.loads(res.text)
+    zout = float(data["t_z"])  
+    
+    swot_offset=zout-zin
+    
+    return swot_offset, zout
+
