@@ -1,0 +1,30 @@
+Install NGIAB
+
+- pip install --user ngiab_data_preprocess
+
+
+
+
+Configure NGIAB
+- python -m ngiab_data_cli -h
+- working dir: ./
+
+
+
+Run Ngen
+
+- cd gage-02464000
+- source /ngen/.venv/bin/activate
+
+- ngen ./config/gage-02464000_subset.gpkg "" ./config/gage-02464000_subset.gpkg "" ./config/realization.json
+
+
+
+
+----
+    Set ngen virtual env
+    
+    - ngen
+    
+    - export VIRTUAL_ENV=/ngen/.venv
+ 
