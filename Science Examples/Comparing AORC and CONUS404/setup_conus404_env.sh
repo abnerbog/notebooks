@@ -14,6 +14,7 @@ source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ~/conda_envs/conus404-env
 
 # Install packages via conda-forge without user prompt; include specific versions
+# some packages require flexibility
 conda install -y -c conda-forge \
   xarray=2024.3.0 \
   intake=2.0.4 \
@@ -34,7 +35,6 @@ conda install -y -c conda-forge \
   seaborn=0.13.2 \
   jupyterlab=4.3.6 \
   ipykernel=6.29.3 \
-  # these packages require some flexibility
   numpy>=2.0 \
   proj \
   pyproj \
