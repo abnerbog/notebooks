@@ -8,6 +8,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from typing import Dict, Optional
 
 def plot_watersheds_with_flowlines(watershed_files, figsize=(8, 18), buffer=5000):
     """
@@ -83,8 +84,201 @@ def plot_watersheds_with_flowlines(watershed_files, figsize=(8, 18), buffer=5000
     plt.tight_layout()
     plt.show()
 
+# preparing data
+def clip_watershed_data(
+    gdfs: Dict[str, gpd.GeoDataFrame],
+    ds_conus404: xr.Dataset,
+    ds_aorc: xr.Dataset,
+    start_date: str,
+    end_date: str
+) -> Dict[str, Dict[str, xr.Dataset]]:
+    """
+    Clips and selects time-sliced data for multiple watersheds from CONUS404 and AORC datasets.
+
+    Args:
+        gdfs (Dict[str, gpd.GeoDataFrame]): A dictionary where keys are watershed names
+                                            and values are GeoDataFrames representing
+                                            the watershed boundaries.
+        ds_conus404 (xr.Dataset): The CONUS404 xarray Dataset.
+        ds_aorc (xr.Dataset): The AORC xarray Dataset.
+        start_date (str): The start date for time slicing (e.g., '2000-01-01').
+        end_date (str): The end date for time slicing (e.g., '2000-12-31').
+
+    Returns:
+        Dict[str, Dict[str, xr.Dataset]]: A nested dictionary where the outer keys are
+                                          watershed names, and the inner dictionary
+                                          contains 'conus404' and 'aorc' keys, each
+                                          mapping to their respective clipped and
+                                          time-sliced xarray Datasets.
+    """
+    
+    clipped_data = {}
+
+    for watershed_name, gdf_clip in gdfs.items():
+        print(f"Processing watershed: {watershed_name}")
+
+        # Clip and select time for CONUS404 dataset
+        ds_conus404_sel = ds_conus404.rio.clip(
+            gdf_clip.geometry.values,
+            gdf_clip.crs,
+            all_touched=True,  # select all grid cells that touch the vector boundary
+            drop=True,         # drop anything that is outside the clipped region
+            invert=False,
+            from_disk=True
+        ).sel(time=slice(start_date, end_date))
+
+        # Clip and select time for AORC dataset
+        ds_aorc_sel = ds_aorc.rio.clip(
+            gdf_clip.geometry.values,
+            gdf_clip.crs,
+            all_touched=True,
+            drop=True,
+            invert=False,
+            from_disk=True
+        ).sel(time=slice(start_date, end_date))
+
+        clipped_data[watershed_name] = {
+            'conus404': ds_conus404_sel,
+            'aorc': ds_aorc_sel
+        }
+    return clipped_data
 
 
+def plot_watershed_data(
+    clipped_data_single_watershed: Dict[str, Union[xr.Dataset, gpd.GeoDataFrame]],
+    variable_of_interest: str,
+    time_index: int = 0,
+    cmap: str = 'viridis',
+    chunk_compute: Optional[Union[str, Dict[str, Any]]] = None
+):
+    """
+    Creates a two-panel plot to compare a variable from CONUS404 and AORC datasets
+    for a single watershed at a specific time step.
+
+    Args:
+        clipped_data_single_watershed (Dict[str, Union[xr.Dataset, gpd.GeoDataFrame]]):
+            A dictionary containing clipped CONUS404 and AORC datasets, and the
+            corresponding GeoDataFrame for a *single* watershed, as obtained from
+            an entry in the dictionary returned by `clip_watershed_data`.
+            Example: `clipped_watershed_datasets['YourWatershedName']`.
+        variable_of_interest (str): The name of the variable to plot (e.g., 'RAINRATE', 'TMP').
+        time_index (int): The index of the time step to plot (default is 0, the first time step).
+        cmap (str): Colormap to use for the plots (default is 'viridis').
+        chunk_compute (Optional[Union[str, Dict[str, Any]]]): Optional chunking
+            configuration to apply before calling .compute(). Can be 'auto', a dictionary
+            like {'time': 720, 'y': -1, 'x': -1}, or None to use existing chunks.
+    """
+    # Extract data for the single watershed
+    ds_conus404_sel = clipped_data_single_watershed['conus404']
+    ds_aorc_sel = clipped_data_single_watershed['aorc']
+    gdf_clip = clipped_data_single_watershed['gdf_clip']
+    watershed_name = gdf_clip.name if hasattr(gdf_clip, 'name') and gdf_clip.name else "Selected Watershed"
+
+
+    # Determine cbar_label and title_prefix based on variable_of_interest
+    variable_metadata = {
+        'RAINRATE': {'label': 'Precipitation (mm/hr)', 'title': 'Precipitation'},
+        'TMP': {'label': 'Temperature (K)', 'title': 'Temperature'},
+        # Add more mappings here for other variables as needed
+    }
+
+    # Get metadata, or use a default if not found
+    metadata = variable_metadata.get(variable_of_interest, {
+        'label': f'{variable_of_interest} (units unknown)',
+        'title': variable_of_interest
+    })
+    cbar_label = metadata['label']
+    title_prefix = metadata['title']
+
+
+    # Ensure the variable exists in the dataset
+    if variable_of_interest not in ds_conus404_sel.data_vars:
+        print(f"Error: Variable '{variable_of_interest}' not found in CONUS404 for {watershed_name}. Cannot plot.")
+        return
+    if variable_of_interest not in ds_aorc_sel.data_vars:
+        print(f"Error: Variable '{variable_of_interest}' not found in AORC for {watershed_name}. Cannot plot.")
+        return
+
+    # Apply chunking before computing if chunk_compute is provided
+    conus404_data_to_compute = ds_conus404_sel[variable_of_interest].isel(time=time_index)
+    aorc_data_to_compute = ds_aorc_sel[variable_of_interest].isel(time=time_index)
+
+    if chunk_compute is not None:
+        # Apply chunking to the relevant data array before computing
+        conus404_data_to_compute = conus404_data_to_compute.chunk(chunk_compute)
+        aorc_data_to_compute = aorc_data_to_compute.chunk(chunk_compute)
+        print(f"Applying chunking {chunk_compute} for computation of {watershed_name}.")
+
+
+    # Compute the data for the selected time index
+    try:
+        t0_conus = conus404_data_to_compute.compute()
+        t0_aorc = aorc_data_to_compute.compute()
+    except IndexError:
+        print(f"Error: Time index {time_index} out of bounds for {watershed_name}. Cannot plot.")
+        return
+    except Exception as e:
+        print(f"Error computing data for {watershed_name} and variable {variable_of_interest}: {e}. Cannot plot.")
+        return
+
+    # Determine common color scale limits
+    vmin = float('inf')
+    vmax = float('-inf')
+
+    if t0_conus.size > 0:
+        vmin = min(vmin, t0_conus.min().item())
+        vmax = max(vmax, t0_conus.max().item())
+    else:
+        print(f"Warning: CONUS404 data for {watershed_name} is empty at time index {time_index}. Skipping for vmin/vmax calculation.")
+
+    if t0_aorc.size > 0:
+        vmin = min(vmin, t0_aorc.min().item())
+        vmax = max(vmax, t0_aorc.max().item())
+    else:
+        print(f"Warning: AORC data for {watershed_name} is empty at time index {time_index}. Skipping for vmin/vmax calculation.")
+    
+    if vmin == float('inf') or vmax == float('-inf'):
+        print("Could not determine valid color scale limits. Check data values or ensure spatial overlap.")
+        return
+
+    time_value_str = pd.to_datetime(t0_conus.time.values).strftime('%Y-%m-%d %H:%M')
+
+    # Create subplots for a single watershed (1 row, 2 columns)
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+
+    plot_handles = [] # To collect plot objects for the shared colorbar
+
+    # Plot CONUS404
+    ax_conus = axes[0]
+    p_conus = t0_conus.plot(
+        ax=ax_conus, vmin=vmin, vmax=vmax, cmap=cmap, add_colorbar=False
+    )
+    gdf_clip.plot(ax=ax_conus, facecolor='none', edgecolor='k', linewidth=1.5)
+    ax_conus.set_title(f'{watershed_name}\nCONUS404 {title_prefix} at {time_value_str}')
+    ax_conus.set_xlabel('')
+    ax_conus.set_ylabel('')
+
+    # Plot AORC
+    ax_aorc = axes[1]
+    p_aorc = t0_aorc.plot(
+        ax=ax_aorc, vmin=vmin, vmax=vmax, cmap=cmap, add_colorbar=False
+    )
+    gdf_clip.plot(ax=ax_aorc, facecolor='none', edgecolor='k', linewidth=1.5)
+    ax_aorc.set_title(f'{watershed_name}\nAORC {title_prefix} at {time_value_str}')
+    ax_aorc.set_xlabel('')
+    ax_aorc.set_ylabel('')
+
+    # Add plot handles for colorbar
+    if p_conus: plot_handles.append(p_conus)
+    if p_aorc: plot_handles.append(p_aorc)
+
+    # Shared colorbar
+    if plot_handles:
+        fig.colorbar(plot_handles[-1], ax=axes, orientation='vertical', fraction=0.02, pad=0.02,
+                     label=cbar_label)
+    
+    plt.show()
+    
 ######## metrics
 
 #### Correlation Starts
@@ -185,6 +379,8 @@ def compute_iqr(ds):
     q75 = ds.quantile(0.75, dim=['y', 'x'])
     q25 = ds.quantile(0.25, dim=['y', 'x'])
     return q75 - q25
+
+def compute_stats(ds)
 
 def compute_bias(ds1, ds2):
     return (ds1 - ds2).mean(dim='time')
