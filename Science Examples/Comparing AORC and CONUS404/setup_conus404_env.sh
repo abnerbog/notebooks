@@ -3,44 +3,32 @@
 # Stop if any command fails
 set -e
 
-# Create a folder in home directory for making the conda environment persistent between sessions
-mkdir -p ~/conda_envs
+# Define the environment name and path
+ENV_NAME="conus404-env"
+ENV_PATH="$HOME/conda_envs/$ENV_NAME"
 
-# Create a new conda environment in home folder so it persists after restarts
-conda create -y --prefix ~/conda_envs/conus404-env python=3.12
+# Create a folder in home directory for making the conda environment persistent between sessions
+mkdir -p "$HOME/conda_envs"
+
+# Check if mamba is installed, if not, install it
+if ! command -v mamba &> /dev/null
+then
+    echo "Mamba not found. Installing mamba..."
+    conda install -y -c conda-forge mamba
+fi
+
+# Create or update the conda environment using the environment.yml file and mamba
+echo "Creating/updating conda environment '$ENV_NAME' from environment.yml..."
+# This command will create the environment at the specified prefix if it doesn't exist,
+# or update it if it does.
+mamba env create -f environment.yml --prefix "$ENV_PATH" || \
+mamba env update -f environment.yml --prefix "$ENV_PATH"
 
 # Activate the environment
+echo "Activating environment '$ENV_NAME'..."
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate ~/conda_envs/conus404-env
+conda activate "$ENV_PATH"
 
-# Install packages via conda-forge without user prompt; include specific versions
-# some packages require flexibility
-conda install -y -c conda-forge \
-  xarray=2024.3.0 \
-  intake=2.0.4 \
-  intake-xarray=0.7.0 \
-  asciitree=0.3.3 \
-  fsspec=2024.3.1 \
-  requests=2.31.0 \
-  aiohttp=3.9.3 \
-  numcodecs=0.12.1 \
-  scipy=1.13.0 \
-  s3fs=2024.3.1 \
-  metpy=1.6.2 \
-  cartopy=0.22.0 \
-  hvplot=0.9.2 \
-  geopandas=0.14.4 \
-  contextily=1.6.2 \
-  rioxarray=0.15.3 \
-  seaborn=0.13.2 \
-  jupyterlab=4.3.6 \
-  ipykernel=6.29.3 \
-  numpy>=2.0 \
-  proj \
-  pyproj \
-  zarr
-
-# Register this environment as a Jupyter kernel
-python -m ipykernel install --user --name conus404-env --display-name "CONUS404 Analysis"
-
-echo "Environment 'conus404-env' created under conda_envs folder and added to JupyterLab kernel list as 'CONUS404 Analysis'."
+echo "Environment '$ENV_NAME' created/updated."
+echo "Jupyter will automatically discover this environment as a kernel (e.g., 'Python [conda env:$ENV_NAME]')."
+echo "Please select that kernel in JupyterLab."
