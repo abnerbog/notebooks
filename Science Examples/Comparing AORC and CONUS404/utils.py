@@ -8,7 +8,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from typing import Dict, Optional
+from typing import Dict, Optional, Union, Any
 
 def plot_watersheds_with_flowlines(watershed_files, figsize=(8, 18), buffer=5000):
     """
@@ -145,7 +145,9 @@ def clip_watershed_data(
 
 
 def plot_watershed_data(
-    clipped_data_single_watershed: Dict[str, Union[xr.Dataset, gpd.GeoDataFrame]],
+    watershed_name: str,
+    clipped_data_watersheds: Dict[str, Dict[str, xr.Dataset]], # Clipped data contains only xarray Datasets
+    gdfs_watersheds: Dict[str, gpd.GeoDataFrame], # Separate input for GeoDataFrames
     variable_of_interest: str,
     time_index: int = 0,
     cmap: str = 'viridis',
@@ -156,11 +158,16 @@ def plot_watershed_data(
     for a single watershed at a specific time step.
 
     Args:
-        clipped_data_single_watershed (Dict[str, Union[xr.Dataset, gpd.GeoDataFrame]]):
-            A dictionary containing clipped CONUS404 and AORC datasets, and the
-            corresponding GeoDataFrame for a *single* watershed, as obtained from
-            an entry in the dictionary returned by `clip_watershed_data`.
-            Example: `clipped_watershed_datasets['YourWatershedName']`.
+        clipped_data_watersheds (Dict[str, Dict[str, xr.Dataset]]): # Updated name
+            The full dictionary containing clipped CONUS404 and AORC datasets
+            for all watersheds, as returned by `clip_watershed_data`.
+        gdfs_watersheds (Dict[str, gpd.GeoDataFrame]): # Updated name
+            A dictionary where keys are watershed names and values are GeoDataFrames representing
+            the watershed boundaries. Used for plotting the watershed outlines.
+        watershed_name (str): # Updated name
+            The name of the specific watershed to plot
+            (e.g., 'Tuolumne River', 'Cottonwood Canyon'). This key must exist
+            in both `clipped_data_watersheds` and `gdfs_watersheds`.
         variable_of_interest (str): The name of the variable to plot (e.g., 'RAINRATE', 'TMP').
         time_index (int): The index of the time step to plot (default is 0, the first time step).
         cmap (str): Colormap to use for the plots (default is 'viridis').
@@ -168,11 +175,19 @@ def plot_watershed_data(
             configuration to apply before calling .compute(). Can be 'auto', a dictionary
             like {'time': 720, 'y': -1, 'x': -1}, or None to use existing chunks.
     """
+    if watershed_name not in clipped_data_watersheds: # Updated name
+        print(f"Error: Watershed '{watershed_name}' not found in provided clipped data.")
+        return
+    if watershed_name not in gdfs_watersheds: # Updated name
+        print(f"Error: Watershed '{watershed_name}' not found in provided GeoDataFrames (gdfs_watersheds).")
+        return
+
     # Extract data for the single watershed
+    clipped_data_single_watershed = clipped_data_watersheds[watershed_name] # Updated name
     ds_conus404_sel = clipped_data_single_watershed['conus404']
     ds_aorc_sel = clipped_data_single_watershed['aorc']
-    gdf_clip = clipped_data_single_watershed['gdf_clip']
-    watershed_name = gdf_clip.name if hasattr(gdf_clip, 'name') and gdf_clip.name else "Selected Watershed"
+    gdf_clip = gdfs_watersheds[watershed_name] # Updated name
+    # watershed_name is already the input parameter, no need to reassign
 
 
     # Determine cbar_label and title_prefix based on variable_of_interest
@@ -379,8 +394,6 @@ def compute_iqr(ds):
     q75 = ds.quantile(0.75, dim=['y', 'x'])
     q25 = ds.quantile(0.25, dim=['y', 'x'])
     return q75 - q25
-
-def compute_stats(ds)
 
 def compute_bias(ds1, ds2):
     return (ds1 - ds2).mean(dim='time')
