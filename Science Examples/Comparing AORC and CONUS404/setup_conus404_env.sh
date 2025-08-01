@@ -10,23 +10,24 @@ ENV_PATH="$HOME/conda_envs/$ENV_NAME"
 # Create a folder in home directory for making the conda environment persistent between sessions
 mkdir -p "$HOME/conda_envs"
 
-# Check if mamba is installed, if not, install it
-if ! command -v mamba &> /dev/null
-then
-    echo "Mamba not found. Installing mamba..."
-    conda install -y -c conda-forge mamba
+# Install the libmamba solver if not already present and configure conda to use it
+echo "Checking for and configuring libmamba solver..."
+if ! conda list -n base | grep -q "conda-libmamba-solver"; then
+    echo "conda-libmamba-solver not found in base environment. Installing..."
+    conda install -n base conda-libmamba-solver -y
 fi
+conda config --set solver libmamba
 
-# Create or update the conda environment using the environment.yml file and mamba
+
+# Create or update the conda environment using the environment.yml file
 echo "Creating/updating conda environment '$ENV_NAME' from environment.yml..."
 # This command will create the environment at the specified prefix if it doesn't exist,
 # or update it if it does.
-mamba env create -f environment.yml --prefix "$ENV_PATH" || \
-mamba env update -f environment.yml --prefix "$ENV_PATH"
+conda env create -f environment.yml --prefix "$ENV_PATH" || \
+conda env update -f environment.yml --prefix "$ENV_PATH"
 
 # Activate the environment
 echo "Activating environment '$ENV_NAME'..."
-source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate "$ENV_PATH"
 
 echo "Environment '$ENV_NAME' created/updated."
