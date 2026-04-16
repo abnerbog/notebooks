@@ -1,0 +1,9 @@
+jupyterlab >= 4.4
+pandas >= 2.2
+matplotlib >= 3.10
+tqdm >- 4.67
+ipywidgets >= 8.1
+shapely >= 2.1
+ipyleaflet >= 0.19
+sidecar >= 0.7
+geopandas >= 1.1
