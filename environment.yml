@@ -29,7 +29,8 @@ dependencies:
   - ipywidgets>=8.1.2
   - sidecar>=0.7.0
   - jupyterlab>=4.4.3
-  - hsclient==1.1.6
   - nb_conda_kernels
   - ipykernel
   - pip
+  - pip:
+      - hsclient==1.1.6
