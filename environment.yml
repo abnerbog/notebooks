@@ -1,4 +1,4 @@
-name: ciroh-devcon-2026-workshop-hydroinformatics
+name: ciroh-devcon-cuahsi-workshop-geospatial
 channels:
   - conda-forge
   - defaults
